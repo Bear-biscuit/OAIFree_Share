@@ -5,7 +5,7 @@
 ### config.json
 secret_key最好复杂一点  
 domain_chatgpt是oaifree的站点地址，这里用的是始皇的，可以替换成自己的反代地址  
-domain_claudet是fuclaude的站点地址，这里用的是始皇的，可以替换成自己的反代地址  
+domain_claudet是fuclaude的站点地址，这里用的是始皇的，可以替换成自己部署的FuClaude地址  
 ```
 {
     "secret_key":"your_admin_secret_key",
