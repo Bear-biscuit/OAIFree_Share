@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}服务器错误{% endblock %}
+
+{% block content %}
+<div class="text-center">
+    <h1>500 - 服务器错误</h1>
+    <p>抱歉，服务器出现了问题。请稍后重试。</p>
+    <a href="{{ url_for('main.index') }}" class="btn btn-primary">返回首页</a>
+</div>
+{% endblock %}

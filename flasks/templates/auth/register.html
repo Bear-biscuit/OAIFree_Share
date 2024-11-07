@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}注册{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card">
+            <div class="card-body p-4 p-lg-5">
+                <h2 class="text-center mb-4" style="color: var(--primary-color);">
+                    <i class="fas fa-user-plus me-2"></i>用户注册
+                </h2>
+                
+                <form method="POST" class="needs-validation" novalidate>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-4">
+                        <label for="username" class="form-label">用户名</label>
+                        <div class="input-group">
+                            <span class="input-group-text border-0 bg-light">
+                                <i class="fas fa-user text-secondary"></i>
+                            </span>
+                            <input type="text" class="form-control" id="username" name="username" 
+                                   required minlength="3" autocomplete="username">
+                        </div>
+                        <div class="form-text">用户名至少需要3个字符</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="email" class="form-label">电子邮箱</label>
+                        <div class="input-group">
+                            <span class="input-group-text border-0 bg-light">
+                                <i class="fas fa-envelope text-secondary"></i>
+                            </span>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   required autocomplete="email">
+                            <button class="btn btn-outline-primary" type="button" id="sendVerificationCode">
+                                发送验证码
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="verification_code" class="form-label">验证码</label>
+                        <div class="input-group">
+                            <span class="input-group-text border-0 bg-light">
+                                <i class="fas fa-key text-secondary"></i>
+                            </span>
+                            <input type="text" class="form-control" id="verification_code" 
+                                   name="verification_code" required maxlength="6">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="vcode" class="form-label"> 注册邀请码</label>
+                        <div class="input-group">
+                            <span class="input-group-text border-0 bg-light">
+                                <i class="fas fa-key text-secondary"></i>
+                            </span>
+                            <input type="text" class="form-control" id="vcode" 
+                                   name="vcode" required maxlength="6">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="password" class="form-label">密码</label>
+                        <div class="input-group">
+                            <span class="input-group-text border-0 bg-light">
+                                <i class="fas fa-lock text-secondary"></i>
+                            </span>
+                            <input type="password" class="form-control" id="password" name="password" 
+                                   required minlength="6" autocomplete="new-password">
+                        </div>
+                        <div class="form-text">密码至少需要6个字符</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="confirm_password" class="form-label">确认密码</label>
+                        <div class="input-group">
+                            <span class="input-group-text border-0 bg-light">
+                                <i class="fas fa-lock text-secondary"></i>
+                            </span>
+                            <input type="password" class="form-control" id="confirm_password" 
+                                   name="confirm_password" required autocomplete="new-password">
+                        </div>
+                    </div>
+
+
+                    <div class="mb-4 form-check">
+                        <input type="checkbox" class="form-check-input" id="agreement" required>
+                        <label class="form-check-label" for="agreement">
+                            我已阅读并同意<a href="#" class="text-decoration-none">服务条款</a>和<a href="#" class="text-decoration-none">隐私政策</a>
+                        </label>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-user-plus me-2"></i>注册
+                        </button>
+                    </div>
+                </form>
+
+                <div class="mt-4 text-center">
+                    <p class="mb-0 text-secondary">已有账号？ 
+                        <a href="{{ url_for('auth.login') }}" class="text-decoration-none">立即登录</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 密码匹配验证
+const password = document.getElementById('password');
+const confirm_password = document.getElementById('confirm_password');
+
+function validatePassword() {
+    if (password.value !== confirm_password.value) {
+        confirm_password.setCustomValidity('密码不匹配');
+    } else {
+        confirm_password.setCustomValidity('');
+    }
+}
+
+password.addEventListener('change', validatePassword);
+confirm_password.addEventListener('keyup', validatePassword);
+
+// 发送验证码按钮控制
+const sendVerificationCodeBtn = document.getElementById('sendVerificationCode');
+const emailInput = document.getElementById('email');
+
+sendVerificationCodeBtn.addEventListener('click', async function() {
+    if (!emailInput.value) {
+        alert('请先输入邮箱地址');
+        return;
+    }
+    
+    // 禁用按钮并开始倒计时
+    let countdown = 60;
+    sendVerificationCodeBtn.disabled = true;
+    sendVerificationCodeBtn.innerHTML = `${countdown}秒后重试`;
+    const token = document.querySelector('meta[name="csrf-token"]').content;
+    // 发送验证码请求
+    try {
+        const response = await fetch('/send-verification-code', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': token
+            },
+            body: JSON.stringify({ email: emailInput.value })
+        });
+        const responseData = await response.json();
+        console.log(responseData);
+        if (!response.ok) {
+            throw new Error(responseData.message || '发送失败');
+        }
+        
+        // 倒计时
+        const timer = setInterval(() => {
+            countdown--;
+            if (countdown <= 0) {
+                clearInterval(timer);
+                sendVerificationCodeBtn.disabled = false;
+                sendVerificationCodeBtn.innerHTML = '发送验证码';
+            } else {
+                sendVerificationCodeBtn.innerHTML = `${countdown}秒后重试`;
+            }
+        }, 1000);
+        
+    } catch (error) {
+        alert(error.message || '发送验证码失败，请稍后重试');
+        sendVerificationCodeBtn.disabled = false;
+        sendVerificationCodeBtn.innerHTML = '发送验证码';
+    }
+});
+
+// 表单验证
+(function () {
+    'use strict'
+    const forms = document.querySelectorAll('.needs-validation')
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault()
+                event.stopPropagation()
+            }
+            form.classList.add('was-validated')
+        }, false)
+    })
+})()
+</script>
+{% endblock %}

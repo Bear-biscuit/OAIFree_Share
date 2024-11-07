@@ -1,0 +1,54 @@
+<div class="table-responsive">
+    <table class="table table-hover mb-0">
+        <thead class="bg-light">
+            <tr>
+                <th class="px-4 py-2">ID</th>
+                <th class="px-4 py-2">用户名</th>
+                <th class="px-4 py-2">邮箱</th>
+                <th class="px-4 py-2">角色</th>
+                <th class="px-4 py-2">最后登录时间</th>
+                <th class="px-4 py-2 text-end">操作</th>
+            </tr>
+        </thead>
+        <tbody id="userTbody">
+            {% for user in users %}
+            <tr>
+                <td class="px-4 py-2 align-middle">
+                    <span class="badge bg-secondary">{{ user.id }}</span>
+                </td>
+                <td class="px-4 py-2 align-middle">{{ user.username }}</td>
+                <td class="px-4 py-2 align-middle">{{ user.email }}</td>
+                <td class="px-4 py-2 align-middle">
+                    <span class="badge bg-primary">{{ user.role }}</span>
+                </td>
+                <td class="px-4 py-2 align-middle">
+                    {% if user.last_login %}
+                        <span class="text-success">
+                            <i class="fas fa-circle me-1" style="font-size: 8px;"></i>
+                            {{ user.last_login }}
+                        </span>
+                    {% else %}
+                        <span class="text-secondary">未登录</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-2 align-middle text-end">
+                    <button class="btn btn-sm btn-light" title="编辑用户">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" title="删除用户">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 分隔线 -->
+<hr class="my-4">
+
+<!-- 分页导航 -->
+<div class="pagination-container d-flex justify-content-center">
+    {% include "admin/pagination.html" %}
+</div>

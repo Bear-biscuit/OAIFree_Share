@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}{% endblock %}</title>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script> -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script> -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.png') }}">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --primary-dark: #4338ca;
+            --secondary-color: #64748b;
+            --success-color: #22c55e;
+            --background-color: #f8fafc;
+            --card-background: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-primary);
+        }
+
+        /* Navbar Styles */
+        .navbar {
+            background-color: var(--card-background);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 1rem 0;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--primary-color) !important;
+            font-size: 1.5rem;
+        }
+
+        .nav-link {
+            color: var(--text-primary) !important;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            background-color: var(--background-color);
+            color: var(--primary-color) !important;
+        }
+
+        /* User Menu */
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .dropdown-menu {
+            border: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-radius: 0.75rem;
+            padding: 0.5rem;
+        }
+
+        .dropdown-item {
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .dropdown-item:hover {
+            background-color: var(--background-color);
+            color: var(--primary-color);
+        }
+
+        /* Content Area */
+        .content-wrapper {
+            min-height: calc(100vh - 160px);
+            padding: 2rem 0;
+        }
+
+        /* Cards */
+        .card {
+            border: none;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Alerts */
+        .alert {
+            border: none;
+            border-radius: 0.75rem;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .alert-success {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+
+        .alert-danger {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .alert-info {
+            background-color: #e0f2fe;
+            color: #075985;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            border-color: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        /* Footer */
+        .footer {
+            background-color: var(--card-background);
+            padding: 2rem 0;
+            margin-top: auto;
+            box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .footer-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-link:hover {
+            color: var(--primary-color);
+        }
+
+        /* Forms */
+        .form-control {
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 991px) {
+            .navbar {
+                padding: 0.5rem 0;
+            }
+
+            .navbar-collapse {
+                background-color: var(--card-background);
+                padding: 1rem;
+                border-radius: 1rem;
+                margin-top: 1rem;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            }
+
+            .navbar-nav {
+                padding: 0.5rem 0;
+            }
+
+            .nav-item {
+                width: 100%;
+                margin: 0.25rem 0;
+            }
+
+            .nav-link {
+                padding: 0.75rem 1rem;
+                display: flex;
+                align-items: center;
+                justify-content: flex-start;
+            }
+
+            .dropdown-menu {
+                position: static !important;
+                width: 100%;
+                margin-top: 0.5rem;
+                box-shadow: none;
+                background-color: var(--background-color);
+            }
+
+            .user-dropdown {
+                margin-top: 0.5rem;
+                padding-top: 0.5rem;
+                border-top: 1px solid rgba(0, 0, 0, 0.1);
+            }
+
+            .navbar-toggler {
+                padding: 0.5rem;
+                border-radius: 0.75rem;
+                background-color: var(--background-color);
+            }
+
+            .navbar-toggler:focus {
+                box-shadow: none;
+            }
+
+            .user-avatar {
+                margin-right: 0.75rem;
+            }
+
+            /* 优化用户信息显示 */
+            .nav-link.dropdown-toggle::after {
+                margin-left: auto;
+            }
+
+            .dropdown-toggle .d-none {
+                display: inline-block !important;
+            }
+
+            .quan {
+                text-align: center;
+            }
+
+            .info {
+                text-align: center;
+            }
+        }
+
+        /* 添加过渡动画 */
+        .navbar-collapse {
+            transition: all 0.3s ease;
+        }
+
+        .navbar-collapse.collapsing {
+            opacity: 0;
+        }
+
+        .navbar-collapse.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body class="d-flex flex-column min-vh-100">
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            {% if 'username' in session %}
+            <a class="navbar-brand" href="{{ url_for('main.index') }}">
+                <i class="fas fa-cube me-2"></i>{{title}}
+            </a>
+            {% endif %}
+
+
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarContent">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    {% if 'username' in session %}
+                    {% if session.get('role') == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin.index') }}">
+                            <i class="fas fa-shield-alt me-2"></i>后台管理
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" id="userDropdown"
+                            data-bs-toggle="dropdown">
+                            <div class="user-avatar">
+                                {{ session['username'][0].upper() }}
+                            </div>
+                            <span class="d-none d-md-inline" id="unique">{{ session['username'] }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('user.index') }}">
+                                    <i class="fas fa-user me-2"></i>个人资料
+                                </a>
+                            </li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                                    <i class="fas fa-sign-out-alt me-2"></i>退出登录
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.login') }}">
+                            <i class="fas fa-sign-in-alt me-2"></i>登录
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.register') }}">
+                            <i class="fas fa-user-plus me-2"></i>注册
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 消息提醒 -->
+    <div class="container mt-4" id="message" style="position: fixed;">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            <i
+                class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'danger' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </div>
+    <!-- 主要内容区域 -->
+    <main class="content-wrapper">
+
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+    <!-- 页脚 -->
+    <footer class="bg-white shadow-inner mt-auto py-4">
+        <div class="container mx-auto px-4">
+            <div class="text-center text-gray-600">
+                <p>© 2024 ChatGPT共享. All Rights Reserved. Created by <a style="color: rgb(106, 149, 228);"
+                        href="https://github.com/Bear-biscuit/OAIFree_Share" target="_blank"
+                        rel="noopener noreferrer">bocchi2b</a></p>
+                <p class="mt-2 text-sm">
+                    <span class="mx-2">联系我们: <a href="mailto:{{email}}"
+                            class="text-blue-500 hover:text-blue-700">{{email}}</a></span>
+                    <span class="mx-2">|</span>
+                    <span class="mx-2">Version 1.2.0</span>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // 选择包含消息的容器
+            const alertContainer = document.querySelector('.container.mt-4');
+
+            // 查询所有警报
+            const alerts = alertContainer.querySelectorAll('.alert');
+
+            alerts.forEach(alert => {
+                // 检查 alert 是否可见
+                if (alert.classList.contains('show')) {
+                    // 设置倒计时为 1 秒
+                    setTimeout(() => {
+                        // 模拟点击关闭按钮
+                        const closeButton = alert.querySelector('.btn-close');
+                        if (closeButton) {
+                            closeButton.click(); // 触发点击事件
+                        }
+                    }, 1000); // 1 秒后开始关闭
+                }
+            });
+        });
+    </script>
+
+
+</body>
+
+</html>

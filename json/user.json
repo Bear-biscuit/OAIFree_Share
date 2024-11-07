@@ -1,8 +1,0 @@
-[
-  {
-    "id": "d87a64eb-3eda-4f87-9268-d79387d1dfe6",
-    "username": "admin",
-    "password": "pbkdf2:sha256:260000$CqvLDzNaezUTatZ2$61963529d02a0c0eb74212775872a910a1315d160c4df11da528ad3c03a5ea85",
-    "role": "admin"
-  }
-]
