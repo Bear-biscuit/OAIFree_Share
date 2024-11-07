@@ -1,0 +1,382 @@
+{% extends "base.html" %}
+
+{% block title %}ChatGPT账号管理{% endblock %}
+
+{% block content %}
+<style>
+    .token-list {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .token-list th,
+    .token-list td {
+        border: 1px solid #e2e8f0;
+        padding: 8px;
+        text-align: left;
+    }
+
+    .token-list th {
+        background-color: #f8fafc;
+    }
+
+    .token-list tr:nth-child(even) {
+        background-color: #f1f5f9;
+    }
+
+    .truncate {
+        max-width: 200px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    h2 {
+        position: relative;
+    }
+
+    #addTokenBtn {
+        position: absolute;
+        font-size: 1rem;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    button:disabled {
+        color: #ccc;
+        background-color: #eee;
+        border: none;
+        cursor: not-allowed;
+    }
+
+    button:disabled:hover {
+        color: #ccc;
+        background-color: #eee;
+        border: none;
+        cursor: not-allowed;
+    }
+
+    @media (max-width: 770px) {
+        body {
+            font-size: 2.3vw;
+        }
+
+        h2 {
+            font-size: 3.5vw !important;
+        }
+
+        #addTokenBtn {
+            font-size: 2vw;
+            line-height: 2vw;
+        }
+
+        .token-list {
+            flex: 1;
+        }
+
+        .token-list thead {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .token-list #tokenTableBody {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .token-list tr {
+            display: flex;
+        }
+
+        .token-list tr,
+        .token-list th,
+        .token-list td {
+            flex: 1;
+        }
+    }
+</style>
+<div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+    <h2 class="text-2xl font-bold text-gray-800 mb-4">账号列表
+        <button id="addTokenBtn"
+            class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-300 ease-in-out mr-2">
+            添加账号
+        </button>
+    </h2>
+    <table class="token-list">
+        <thead>
+            <th>Email</th>
+            <th>Sk Token</th>
+            <th>状态</th>
+            <th>操作</th>
+        </thead>
+        <tbody id="tokenTableBody">
+            <!-- Token 数据将在这里动态添加 -->
+        </tbody>
+    </table>
+    <div class="flex items-center justify-between mt-4">
+        <!-- <div>
+            <button id="refreshBtn"
+                class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-300 ease-in-out mr-2">
+                立即刷新 Tokens
+            </button>
+        </div> -->
+        <p id="statusMessage" class="italic"></p>
+    </div>
+</div>
+
+<!-- <div id="tokenModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">账号信息</h3>
+            <form id="tokenForm">
+                <input type="hidden" id="id">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
+                        邮箱
+                    </label>
+                    <input
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        id="email" type="text" required placeholder="仅用于标识">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="skToken">
+                        skToken
+                    </label>
+                    <input
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        id="skToken" type="text" placeholder="必填" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="PLUS">
+                        PLUS
+                    </label>
+                    <select
+                        class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        id="PLUS" required>
+                        <option value='false'>false</option>
+                        <option value='true'>true</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-end">
+                    <button type="button" onclick="closeModal()"
+                        class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mr-2">
+                        取消
+                    </button>
+                    <button type="submit"
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div> -->
+<div class="modal fade" id="tokenModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalLabel">账号信息</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="tokenForm">
+                    <input type="hidden" id="id">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">邮箱</label>
+                        <input type="text" class="form-control" id="email" required placeholder="仅用于标识">
+                    </div>
+                    <div class="mb-3">
+                        <label for="skToken" class="form-label">skToken</label>
+                        <input type="text" class="form-control" id="skToken" placeholder="必填" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="PLUS" class="form-label">PLUS</label>
+                        <select class="form-select" id="PLUS" required>
+                            <option value="false">false</option>
+                            <option value="true">true</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="submit" form="tokenForm" class="btn btn-primary">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+<script>
+
+    function loadTokens() {
+        fetch('/get_Claude')
+            .then(response => response.json())
+            .then(data => {
+                tokens = data
+                tokenTableBody.innerHTML = '';
+                data.forEach(token => {
+                    let rt = '有'
+                    if (!token.skToken) {
+                        rt = '无'
+                    }
+                    let recolor = token.skToken ? ' style="color: rgb(6, 161, 6);"' : ' style="color: rgb(204, 28, 28);"'
+                    let color = token.status ? ' style="color: rgb(6, 161, 6);"' : ' style="color: rgb(204, 28, 28);"'
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                            <td class="truncate">${token.email}</td>
+                            <td class="truncate" ${recolor}>${rt}</td>
+                            <td class="truncate"  ${color}>${token.status ? '有效' : '失效'}</td>
+                            <td>
+                                <button onclick="editUser('${token.email}')" class="text-blue-600 hover:text-blue-900 mr-4">编辑</button>
+                                <button onclick="deleteUser('${token.email}')" class="text-red-600 hover:text-red-900">删除</button>
+                            </td>
+                        `;
+                    tokenTableBody.appendChild(row);
+                });
+            })
+            .catch(error => {
+                console.error('加载 Tokens 失败:', error);
+                showStatus('加载 Tokens 失败', 'error');
+            });
+    }
+
+    let tokens = []
+    const modal = new bootstrap.Modal(document.getElementById('tokenModal'));
+    const tokenForm = document.getElementById('tokenForm');
+    const addTokenBtn = document.getElementById('addTokenBtn');
+
+    // 打开模态框
+    function openModal(email = null) {
+        const form = document.getElementById('tokenForm');
+        if (email) {
+            document.getElementById('id').value = 'id'
+            document.getElementById('email').value = email.email;
+            document.getElementById('skToken').value = email.skToken;
+            document.getElementById('PLUS').value = email.PLUS;
+        } else {
+            form.reset();
+            document.getElementById('id').value = '';
+        }
+        modal.show();
+    }
+
+    // 关闭模态框
+    function closeModal() {
+        modal.hide();
+    }
+
+    // 编辑用户
+    function editUser(email) {
+        const tkemail = tokens.find(u => u.email === email);
+        if (tkemail) {
+            openModal(tkemail);
+        }
+    }
+
+    // 删除用户
+    function deleteUser(email) {
+        if (confirm('确定要删除这个账户吗？')) {
+            const token = document.querySelector('meta[name="csrf-token"]').content;
+            fetch(`/api/Claude/${email}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': token
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loadTokens();
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+    }
+
+    // 表单提交处理
+    tokenForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const Id = document.getElementById('id').value;
+        const tkemail = document.getElementById('email').value
+        const skToken = document.getElementById('skToken').value
+        const plus = document.getElementById('PLUS').value
+        const tkData = {
+            email: document.getElementById('email').value,
+            SkToken: skToken,
+            PLUS: plus
+        };
+
+        const url = Id ? `/api/Claude/${tkemail}` : '/api/Claude';
+        const method = Id ? 'PUT' : 'POST';
+        const token = document.querySelector('meta[name="csrf-token"]').content;
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': token
+            },
+            body: JSON.stringify(tkData)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    closeModal();
+                    loadTokens();
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    });
+
+    // 添加用户按钮点击事件
+    addTokenBtn.addEventListener('click', () => openModal());
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const tokenTableBody = document.getElementById('tokenTableBody');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        const autoRefreshToggle = document.getElementById('autoRefreshToggle');
+        const refreshInterval = document.getElementById('refreshInterval');
+        const nextRefreshTime = document.getElementById('nextRefreshTime');
+        const refreshHistory = document.getElementById('refreshHistory');
+
+        function loadTokens() {
+            fetch('/get_Claude')
+                .then(response => response.json())
+                .then(data => {
+                    tokens = data
+                    tokenTableBody.innerHTML = '';
+                    data.forEach(token => {
+                        let rt = '有'
+                        if (!token.skToken) {
+                            rt = '无'
+                        }
+                        let recolor = token.skToken ? ' style="color: rgb(6, 161, 6);"' : ' style="color: rgb(204, 28, 28);"'
+                        let color = token.status ? ' style="color: rgb(6, 161, 6);"' : ' style="color: rgb(204, 28, 28);"'
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td class="truncate">${token.email}</td>
+                            <td class="truncate" ${recolor}>${rt}</td>
+                            <td class="truncate"  ${color}>${token.status ? '有效' : '失效'}</td>
+                            <td>
+                                <button onclick="editUser('${token.email}')" class="text-blue-600 hover:text-blue-900 mr-4">编辑</button>
+                                <button onclick="deleteUser('${token.email}')" class="text-red-600 hover:text-red-900">删除</button>
+                            </td>
+                        `;
+                        tokenTableBody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('加载 Tokens 失败:', error);
+                    showStatus('加载 Tokens 失败', 'error');
+                });
+        }
+
+        // 初始化
+        loadTokens();
+    });
+</script>
+{% endblock %}

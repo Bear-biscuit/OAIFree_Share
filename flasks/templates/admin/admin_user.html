@@ -1,0 +1,710 @@
+{% extends "base.html" %}
+
+{% block title %}管理页面{% endblock %}
+
+{% block content %}
+<style>
+    /* 表格样式优化 */
+    .table th {
+        font-weight: 500;
+        border-bottom: 2px solid #e9ecef;
+        text-align: center !important;
+    }
+
+    .table td {
+        border-bottom: 1px solid #e9ecef;
+        text-align: center !important;
+    }
+
+    .table tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* 按钮样式优化 */
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    /* 搜索栏在小屏幕上的布局 */
+    @media (max-width: 576px) {
+        .input-group {
+            flex-direction: column;
+        }
+
+        .input-group input {
+            border-radius: 0.5rem !important;
+            width: 100% !important;
+            margin-bottom: 0.5rem;
+        }
+
+        .input-group button {
+            flex: 1;
+            border-radius: 0.5rem !important;
+        }
+    }
+
+    /* 分页导航优化 */
+    .pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .pagination .page-link {
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.5rem;
+        margin: 0 0.125rem;
+        color: var(--primary-color);
+        background-color: transparent;
+        border: 1px solid #dee2e6;
+    }
+
+    .pagination .page-item.active .page-link {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        color: white;
+    }
+
+    .pagination .page-item.disabled .page-link {
+        color: #6c757d;
+        pointer-events: none;
+        background-color: #fff;
+        border-color: #dee2e6;
+    }
+
+    .pagination .page-link:hover {
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+        color: var(--primary-color);
+    }
+
+    /* 分页在小屏幕上换行 */
+    @media (max-width: 576px) {
+        .pagination {
+            justify-content: space-around;
+        }
+    }
+</style>
+<!-- 统计卡片 -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 me-3"
+                        style="background-color: #e0f2fe; padding: 12px; border-radius: 12px;">
+                        <i class="fas fa-users text-primary"></i>
+                    </div>
+                    <div>
+                        <h6 class="card-subtitle mb-1 text-secondary">总用户数</h6>
+                        <h2 class="card-title mb-0">{{ total_users }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 me-3"
+                        style="background-color: #dcfce7; padding: 12px; border-radius: 12px;">
+                        <i class="fas fa-user-plus text-success"></i>
+                    </div>
+                    <div>
+                        <h6 class="card-subtitle mb-1 text-secondary">新增用户</h6>
+                        <h2 class="card-title mb-0">{{ new_users_count }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 me-3"
+                        style="background-color: #fef9c3; padding: 12px; border-radius: 12px;">
+                        <i class="fas fa-user-clock text-warning"></i>
+                    </div>
+                    <div>
+                        <h6 class="card-subtitle mb-1 text-secondary">活跃用户</h6>
+                        <h2 class="card-title mb-0">{{ active_users_count }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 me-3"
+                        style="background-color: #fee2e2; padding: 12px; border-radius: 12px;">
+                        <i class="fas fa-user-slash text-danger"></i>
+                    </div>
+                    <div>
+                        <h6 class="card-subtitle mb-1 text-secondary">不活跃用户</h6>
+                        <h2 class="card-title mb-0">{{ inactive_users_count }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 图表区域 -->
+<div class="row mb-4">
+    <div class="col-md-6" style="margin-top: 1rem;">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">近15天注册趋势</h5>
+                <p class="card-subtitle text-secondary mb-4">显示每日新增注册用户数量</p>
+                <canvas id="registrationChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6" style="margin-top: 1rem;">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">用户活跃度分析</h5>
+                <p class="card-subtitle text-secondary mb-4">显示每日活跃用户数量</p>
+                <canvas id="activityChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="data-container1" data-dates='{{ dates|tojson|safe }}'></div>
+<div id="data-container2" data-dates='{{ registration_data|tojson|safe }}'></div>
+<div id="data-container3" data-dates='{{ activity_data|tojson|safe }}'></div>
+
+<!-- 邀请码管理卡片 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title mb-0">邀请码管理</h5>
+                    <button class="btn btn-primary" id="generateInviteCode">
+                        <i class="fas fa-plus-circle me-2"></i>生成邀请码
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>邀请码</th>
+                                <th>剩余(个)</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inviteCodeList">
+                            <!-- 邀请码列表将通过JavaScript动态添加 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-white py-3">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2 text-primary"></i>用户列表
+                    </h5>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="searchInput" placeholder="搜索用户..." aria-label="搜索用户"
+                            style="border-radius: 0.5rem 0 0 0.5rem;">
+                        <button class="btn btn-primary" id="searchbtn" type="button"
+                            style="border-radius: 0 0.5rem 0.5rem 0;">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            <!-- 用户表格部分 -->
+            <div class="table-responsive" style="position: relative;">
+                <!-- 加载动画 -->
+                <div id="loading"
+                    style="display: none; left: 0; top: 0; width: 100%; height: 100%; text-align: center; position: absolute; background-color: #6c757d3a;">
+                    <div style="height: 100%; display: flex; flex-direction: column; justify-content: center;">
+                        <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+                        <p class="mt-2 text-secondary">正在加载数据，请稍候...</p>
+                    </div>
+                </div>
+                {% include "admin/_user_table.html" %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑用户模态框 -->
+    <div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">编辑用户</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editUserForm">
+                        <input type="hidden" id="editUserId" name="id">
+                        <div class="mb-3">
+                            <label for="editUsername" class="form-label">用户名</label>
+                            <input type="text" class="form-control" id="editUsername" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editEmail" class="form-label">邮箱</label>
+                            <input type="email" class="form-control" id="editEmail" name="email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editRole" class="form-label">角色</label>
+                            <select class="form-select" id="editRole" name="role" required>
+                                <option value="user">普通用户</option>
+                                <option value="admin">管理员</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editPassword" class="form-label">新密码</label>
+                            <input type="password" class="form-control" id="editPassword" name="password" minlength="6"
+                                autocomplete="new-password">
+                            <div class="form-text text-muted">如果不需要修改密码，请留空</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editPasswordConfirm" class="form-label">确认新密码</label>
+                            <input type="password" class="form-control" id="editPasswordConfirm" minlength="6"
+                                autocomplete="new-password">
+                            <div id="passwordMismatch" class="invalid-feedback">
+                                两次输入的密码不匹配
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveUserBtn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除用户模态框 -->
+    <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">删除用户</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>确定要删除用户 <span id="deleteUsername"></span> 吗？此操作不可撤销。</p>
+                    <input type="hidden" id="deleteUserId">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">确认删除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const generateBtn = document.getElementById('generateInviteCode');
+
+        // 获取邀请码列表
+        function fetchInviteCodes() {
+            axios.get('/api/code') // 修改为你的API路径
+                .then(function (response) {
+                    const codeList = response.data.codes;
+                    const inviteCodeList = document.getElementById('inviteCodeList');
+                    inviteCodeList.innerHTML = ''; // 清空当前列表
+
+                    if (codeList.length > 0) {
+                        const code = codeList[0]; // 只选择第一个邀请码
+                        const row = document.createElement('tr');
+                        const cell = document.createElement('td');
+                        const num = document.createElement('td');
+                        const cao = document.createElement('td');
+
+                        cell.textContent = code; // 设置邀请码
+                        num.textContent = codeList.length;
+                        cao.innerHTML = `
+                    <i class="fas fa-copy me-2 text-primary copy-button" data-code="${code}" style="cursor: pointer;" title="复制邀请码"></i>
+                `;
+
+                        row.appendChild(cell);
+                        row.appendChild(num);
+                        row.appendChild(cao);
+                        inviteCodeList.appendChild(row);
+
+                        // 添加复制按钮的点击事件
+                        document.querySelector('.copy-button').addEventListener('click', function () {
+                            const codeToCopy = this.getAttribute('data-code'); // 获取要复制的邀请码
+                            console.log(codeToCopy);
+                            navigator.clipboard.writeText(codeToCopy).then(() => {
+                                alert('邀请码已复制: ' + codeToCopy);
+                            }).catch(err => {
+                                console.error('复制失败:', err);
+                            });
+                        });
+                    } else {
+                        // 如果没有邀请码，显示提示
+                        inviteCodeList.innerHTML = '<tr><td colspan="2">没有邀请码可显示</td></tr>';
+                    }
+                })
+                .catch(function (error) {
+                    console.error('获取邀请码失败:', error.response.data);
+                });
+        }
+
+
+        generateBtn.addEventListener('click', async function () {
+            try {
+                const token = document.querySelector('meta[name="csrf-token"]').content;
+                const response = await fetch('/api/code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': token
+                    }
+                });
+
+                if (response.ok) {
+                    fetchInviteCodes();
+                } else {
+                    alert('生成邀请码失败');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('发生错误');
+            }
+        });
+        fetchInviteCodes();
+    });
+</script>
+
+<script>
+    const commonOptions = {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                mode: 'index',
+                intersect: false,
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                titleColor: '#1e293b',
+                bodyColor: '#1e293b',
+                borderColor: '#e2e8f0',
+                borderWidth: 1,
+                padding: 12,
+                displayColors: false
+            }
+        },
+        scales: {
+            x: {
+                grid: {
+                    display: false
+                },
+                ticks: {
+                    font: {
+                        size: 12
+                    }
+                }
+            },
+            y: {
+                beginAtZero: true,
+                grid: {
+                    color: '#f1f5f9'
+                },
+                ticks: {
+                    stepSize: 1,
+                    font: {
+                        size: 12
+                    }
+                }
+            }
+        },
+        elements: {
+            line: {
+                tension: 0.4
+            },
+            point: {
+                radius: 4,
+                hoverRadius: 6
+            }
+        }
+    };
+
+    const dates = JSON.parse(document.getElementById('data-container1').dataset.dates);
+    const registration_data = JSON.parse(document.getElementById('data-container2').dataset.dates);
+    const activity_data = JSON.parse(document.getElementById('data-container3').dataset.dates);
+    // 注册趋势图表
+    const registrationCtx = document.getElementById('registrationChart').getContext('2d');
+    new Chart(registrationCtx, {
+        type: 'line',
+        data: {
+            labels: dates,  // 直接使用 MM-DD 格式的日期
+            datasets: [{
+                label: '新注册用户',
+                data: registration_data,
+                borderColor: '#4f46e5',
+                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                fill: true,
+                borderWidth: 2,
+                pointBackgroundColor: '#ffffff',
+                pointBorderColor: '#4f46e5',
+                pointBorderWidth: 2
+            }]
+        },
+        options: {
+            ...commonOptions,
+            plugins: {
+                ...commonOptions.plugins,
+                tooltip: {
+                    ...commonOptions.plugins.tooltip,
+                    callbacks: {
+                        label: function (context) {
+                            return `新注册: ${context.parsed.y} 用户`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+
+    // 活跃度图表
+    const activityCtx = document.getElementById('activityChart').getContext('2d');
+    new Chart(activityCtx, {
+        type: 'line',
+        data: {
+            labels: dates,  // 直接使用 MM-DD 格式的日期
+            datasets: [{
+                label: '活跃用户',
+                data: activity_data,
+                borderColor: '#22c55e',
+                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                fill: true,
+                borderWidth: 2,
+                pointBackgroundColor: '#ffffff',
+                pointBorderColor: '#22c55e',
+                pointBorderWidth: 2
+            }]
+        },
+        options: {
+            ...commonOptions,
+            plugins: {
+                ...commonOptions.plugins,
+                tooltip: {
+                    ...commonOptions.plugins.tooltip,
+                    callbacks: {
+                        label: function (context) {
+                            return `活跃: ${context.parsed.y} 用户`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+<script>
+    function cao() {
+        // 编辑用户
+        const editButtons = document.querySelectorAll('.btn-light');
+        editButtons.forEach(button => {
+            button.addEventListener('click', function () {
+                const row = this.closest('tr');
+                const userId = row.querySelector('.badge').textContent;
+                const username = row.querySelector('td:nth-child(2)').textContent;
+                const email = row.querySelector('td:nth-child(3)').textContent;
+                const role = row.querySelector('.badge.bg-primary').textContent;
+
+                // 重置表单
+                document.getElementById('editUserForm').reset();
+
+                // 填充数据
+                document.getElementById('editUserId').value = userId;
+                document.getElementById('editUsername').value = username;
+                document.getElementById('editEmail').value = email;
+                document.getElementById('editRole').value = role;
+
+                new bootstrap.Modal(document.getElementById('editUserModal')).show();
+            });
+        });
+
+        // 密码确认验证
+        document.getElementById('editPasswordConfirm').addEventListener('input', function () {
+            const password = document.getElementById('editPassword').value;
+            const confirmPassword = this.value;
+
+            if (password !== confirmPassword) {
+                this.classList.add('is-invalid');
+                document.getElementById('passwordMismatch').style.display = 'block';
+            } else {
+                this.classList.remove('is-invalid');
+                document.getElementById('passwordMismatch').style.display = 'none';
+            }
+        });
+
+        // 保存用户信息
+        document.getElementById('saveUserBtn').addEventListener('click', async function () {
+            const form = document.getElementById('editUserForm');
+            const password = document.getElementById('editPassword').value;
+            const confirmPassword = document.getElementById('editPasswordConfirm').value;
+
+            // 如果输入了密码，验证两次密码是否匹配
+            if (password && password !== confirmPassword) {
+                alert('两次输入的密码不匹配');
+                return;
+            }
+
+            const formData = new FormData(form);
+            const userId = formData.get('id');
+            const data = Object.fromEntries(formData);
+            const token = document.querySelector('meta[name="csrf-token"]').content;
+            // 如果密码为空，从提交数据中删除密码字段
+            if (!data.password) {
+                delete data.password;
+            }
+
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': token
+                    },
+                    body: JSON.stringify(data),
+                });
+
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    const errorData = await response.json();
+                    alert(errorData.error || '更新用户信息失败');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('发生错误');
+            }
+        });
+
+        // 删除用户
+        const deleteButtons = document.querySelectorAll('.btn-danger');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function () {
+                const row = this.closest('tr');
+                const userId = row.querySelector('.badge').textContent;
+                const username = row.querySelector('td:nth-child(2)').textContent;
+
+                document.getElementById('deleteUserId').value = userId;
+                document.getElementById('deleteUsername').textContent = username;
+
+                new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
+            });
+        });
+
+        // 确认删除用户
+        document.getElementById('confirmDeleteBtn').addEventListener('click', async function () {
+            const userId = document.getElementById('deleteUserId').value;
+            const token = document.querySelector('meta[name="csrf-token"]').content;
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': token
+                    }
+                });
+
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    const errorData = await response.json();
+                    alert(errorData.error || '删除用户失败');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('发生错误');
+            }
+        });
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+        cao();
+
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchbtn');
+        const tableBody = document.querySelector('#userTbody');
+        const paginationContainer = document.querySelector('.pagination-container');
+        const loadingIndicator = document.getElementById('loading');
+
+        function showLoading(isLoading) {
+            loadingIndicator.style.display = isLoading ? '' : 'none';
+        }
+
+        async function fetchUsers(searchText = '', page = 1) {
+            try {
+                showLoading(true);
+
+                const response = await fetch(`/admin_user?page=${page}&search=${encodeURIComponent(searchText)}`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                if (!response.ok) throw new Error('加载数据失败');
+
+                const html = await response.text();
+                const parser = new DOMParser();
+                const newDocument = parser.parseFromString(html, 'text/html');
+
+                const newTableBody = newDocument.querySelector('#userTbody');
+                tableBody.innerHTML = newTableBody.innerHTML;
+
+                const newPagination = newDocument.querySelector('.pagination-container');
+                paginationContainer.innerHTML = newPagination.innerHTML;
+                cao();
+                showLoading(false);
+            } catch (error) {
+                console.error('数据加载错误:', error);
+                showLoading(false);
+            }
+        }
+
+        searchBtn.addEventListener('click', () => {
+            const searchText = searchInput.value.trim();
+            fetchUsers(searchText, 1);
+        });
+
+        searchInput.addEventListener('input', () => {
+            const searchText = searchInput.value.trim();
+            fetchUsers(searchText, 1);
+        });
+
+        paginationContainer.addEventListener('click', function (event) {
+            const target = event.target.closest('a');
+            if (target) {
+                event.preventDefault();
+                const page = new URL(target.href).searchParams.get('page');
+                const searchText = searchInput.value.trim();
+                fetchUsers(searchText, page);
+            }
+        });
+
+    });
+</script>
+
+
+{% endblock %}

@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}首页{% endblock %}
+
+{% block content %}
+<style>
+    /* 普通账号样式 */
+    .account-box {
+        background: linear-gradient(145deg, #ffffff, #f0f0f0);
+        position: relative;
+        overflow: hidden;
+        border: 2px solid #e0e0e0;
+        transition: all 0.3s ease;
+    }
+
+    .account-box:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .account-box h2 {
+        color: #2c5282;
+        /* 深蓝色 */
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .account-box p {
+        color: #4a5568;
+    }
+
+    /* PLUS账号样式 */
+    .account-box.plus {
+        background: linear-gradient(45deg, #fff1c1, #ffd700, #fff1c1);
+        border: 2px solid #ffd700;
+    }
+
+    .account-box.plus:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(255, 215, 0, 0.3);
+    }
+
+    .account-box.plus::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(to right,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent);
+        transform: rotate(45deg);
+        animation: shine 3s infinite;
+    }
+
+    .account-box.plus h2 {
+        color: #8B4513;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .account-box.plus p {
+        color: #DAA520;
+        font-weight: 500;
+    }
+
+    @keyframes shine {
+        0% {
+            transform: rotate(45deg) translateX(-100%);
+        }
+
+        50% {
+            transform: rotate(45deg) translateX(100%);
+        }
+
+        100% {
+            transform: rotate(45deg) translateX(100%);
+        }
+    }
+
+    .modal {
+        transition: opacity 0.3s ease;
+        margin: auto;
+    }
+
+    .announcement {
+        animation: slideDown 0.5s ease-out;
+    }
+
+    @keyframes slideDown {
+        from {
+            transform: translateY(-100%);
+        }
+
+        to {
+            transform: translateY(0);
+        }
+    }
+</style>
+<style>
+    .modal-announcement {
+        background: linear-gradient(135deg, #f6f8f9 0%, #e5ebee 50%, #d7dee3 100%);
+        font-family: 'Nunito', sans-serif;
+    }
+
+    .announcement-icon {
+        background: linear-gradient(45deg, #3b82f6, #1e40af);
+        color: white;
+        border-radius: 50%;
+        padding: 18px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .announcement-title {
+        font-weight: 600;
+        color: #1e3a8a;
+    }
+
+    .announcement-content {
+        color: #4b5563;
+    }
+
+    .announcement-list-item {
+        color: #374151;
+    }
+
+    .announcement-list-item i {
+        font-size: 1.1rem;
+    }
+
+    .btn-primary {
+        background-color: #3b82f6;
+        border-color: #3b82f6;
+    }
+
+    .btn-primary:hover {
+        background-color: #1e40af;
+        border-color: #1e40af;
+    }
+</style>
+<!-- 公告框 -->
+<div class="modal fade" id="announcementModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-announcement shadow-lg border-0">
+            <div class="modal-header border-bottom-0 pb-0">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center px-5 pb-5 pt-0">
+                <div class="d-flex justify-content-center mb-4">
+                    <div class="announcement-icon">
+                        <i class="fas fa-info-circle fa-2x"></i>
+                    </div>
+                </div>
+                <h2 class="mb-3 announcement-title">AI共享账号服务公告</h2>
+                <p class="announcement-content mb-4">
+                    感谢您使用我们的服务。为确保良好的使用体验,请注意以下事项:
+                </p>
+                <ul class="list-unstyled text-start mx-auto" style="max-width: 350px;">
+                    <li class="mb-3 announcement-list-item">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        使用时请遵守相关规定
+                    </li>
+                    <li class="mb-3 announcement-list-item">
+                        <i class="fas fa-comment-dots text-primary me-2"></i>
+                        有任何问题请及时反馈
+                    </li>
+                    <li class="announcement-list-item">
+                        <i class="fas fa-shield-alt text-warning me-2"></i>
+                        保护个人和共享账号安全
+                    </li>
+                </ul>
+            </div>
+            <div class="modal-footer border-top-0 justify-content-center pb-4">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">我已知悉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    {% if gpt_valid_tokens %}
+    {% for token in gpt_valid_tokens %}
+    <div class="account-box {% if token.PLUS.lower() == 'true' %}plus{% endif %} bg-white rounded-lg shadow-md p-6 text-center cursor-pointer"
+        data-index="{{ token.index }}" data-type="chatgpt">
+        <h2 class="text-xl font-semibold mb-2">
+            {% if token.PLUS.lower() == 'true' %}
+            ChatGPT PLUS {{ loop.index }}
+            {% else %}
+            ChatGPT普号 {{ loop.index }}
+            {% endif %}
+        </h2>
+        <p class="text-gray-600"><img src="{{ token.type }}" alt="" style="width: 2rem; margin: 0 auto;"></p>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p class="text-lg text-gray-600 col-span-full text-center">暂无GPT账号</p>
+    {% endif %}
+</div>
+
+<h1 class="text-3xl font-bold text-center my-8 text-gray-800"></h1>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    {% if claude_valid_tokens %}
+    {% for token in claude_valid_tokens %}
+    <div class="account-box {% if token.PLUS.lower() == 'true' %}plus{% endif %} bg-white rounded-lg shadow-md p-6 text-center cursor-pointer"
+        data-index="{{ token.index }}" data-type="claude">
+        <h2 class="text-xl font-semibold mb-2">
+            {% if token.PLUS.lower() == 'true' %}
+            Claude PLUS {{ loop.index }}
+            {% else %}
+            Claude普号 {{ loop.index }}
+            {% endif %}
+        </h2>
+        <p class="text-gray-600"><img src="{{ token.type }}" alt="" style="width: 2rem; margin: 0 auto;"></p>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p class="text-lg text-gray-600 col-span-full text-center">暂无Claude账号</p>
+    {% endif %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+        const boxes = document.querySelectorAll('.account-box');
+        const uniqueNameInput = document.getElementById('uniqueNameInput');
+        const uniqueName = document.querySelector('#unique').innerHTML
+        let currentIndex = null;
+        let currentType = null;
+
+
+        boxes.forEach(box => {
+            box.addEventListener('click', function () {
+                currentIndex = this.dataset.index;
+                currentType = this.dataset.type;
+
+                const token = document.querySelector('meta[name="csrf-token"]').content;
+                fetch('/submit_name', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': token
+                    },
+                    body: JSON.stringify({
+                        unique_name: uniqueName,
+                        index: +currentIndex + 1,
+                        type: currentType
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // console.log(data);
+                            window.location.href = data.login_url;
+                        }
+                        else {
+                            alert(data.message);
+                            // console.log(data);
+                            window.location.href = '/'
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('提交失败,请重试');
+                    });
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}个人中心{% endblock %}
+
+{% block content %}
+<style>
+    .switch-size {
+        transform: scale(1.5);
+        /* 调整缩放比例，1.5 表示放大 150% */
+        margin-left: -0.25rem;
+        /* 根据需要调整位置使其对齐 */
+    }
+</style>
+<div class="row justify-content-center" style="position: relative;">
+
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <div id="flashMessageContainer" style="position: absolute; top: 0; right: 0; z-index: 1050;"></div>
+                    <div class="user-avatar mx-auto mb-3" style="width: 100px; height: 100px; font-size: 2.5rem;">
+                        {{ user.username[0].upper() }}
+                    </div>
+                    <h3 class="mb-1">{{ user.username }}</h3>
+                    <p class="text-secondary mb-0">{{ user.email }}</p>
+                    <span class="badge bg-primary mt-2">{{ user.role }}</span>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fas fa-info-circle me-2"></i>账户信息
+                                </h5>
+                                <ul class="list-unstyled mt-3">
+                                    <li class="mb-2">
+                                        <span class="text-secondary">账户ID：</span>
+                                        <span class="fw-medium" id="id" data-id="{{ user.id }}">{{ user.id }}</span>
+                                    </li>
+                                    <li class="mb-2">
+                                        <span class="text-secondary">注册时间：</span>
+                                        <span class="fw-medium">{{user.registered_at}}</span>
+                                    </li>
+                                    <li class="mb-2">
+                                        <span class="text-secondary">最后登录：</span>
+                                        <span class="fw-medium">{{ user.last_login.strftime('%Y-%m-%d %H:%M:%S') if
+                                            user.last_login else '暂无记录' }}</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fas fa-shield-alt me-2"></i>安全设置
+                                </h5>
+                                <ul class="list-group list-group-flush mt-3">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                        <div>
+                                            <h6 class="mb-0">修改密码</h6>
+                                            <small class="text-secondary">定期更改密码以保护账户安全</small>
+                                        </div>
+                                        <button class="btn btn-outline-primary btn-sm" id="editPassword">
+                                            修改
+                                        </button>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                        <div>
+                                            <h6 class="mb-0">两步验证</h6>
+                                            <small class="text-secondary">增加额外的账户安全性</small>
+                                        </div>
+                                        {% if user.two_fa %}
+                                        <div class="form-check form-switch m-0">
+                                            <input class="form-check-input switch-size" checked type="checkbox"
+                                                id="twoFactorSwitch">
+                                        </div>
+                                        {% else %}
+                                        <div class="form-check form-switch m-0">
+                                            <input class="form-check-input switch-size" type="checkbox"
+                                                id="twoFactorSwitch">
+                                        </div>
+                                        {% endif %}
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 修改密码模态框 -->
+<div class="modal fade" id="editPasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">修改密码</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editPasswordForm">
+                    <div class="mb-3">
+                        <label for="currentPassword" class="form-label">原始密码</label>
+                        <input type="password" class="form-control" id="currentPassword" name="currentPassword" required
+                            autocomplete="current-password">
+                    </div>
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">新密码</label>
+                        <input type="password" class="form-control" id="newPassword" name="newPassword" minlength="6"
+                            required autocomplete="new-password">
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmNewPassword" class="form-label">确认新密码</label>
+                        <input type="password" class="form-control" id="confirmNewPassword" minlength="6" required
+                            autocomplete="new-password">
+                        <div id="passwordMismatch" class="invalid-feedback">
+                            两次输入的密码不匹配
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="savePasswordBtn">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+<script>
+    // 获取 CSRF 令牌
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    // 设置 Axios 的默认 CSRF 请求头
+    axios.defaults.headers.common['X-CSRFToken'] = csrfToken;
+
+    function showFlashMessage(message, type) {
+        // 创建一个唯一的 ID
+        const messageId = 'flashMessage' + Date.now();
+
+        // 创建 Alert 元素
+        const alertDiv = document.createElement('div');
+        alertDiv.id = messageId;
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.role = 'alert';
+        alertDiv.innerHTML = `
+        ${message}
+    `;
+
+        // 将 Alert 添加到容器中
+        const container = document.getElementById('flashMessageContainer');
+        container.appendChild(alertDiv);
+
+        // 设置定时器，自动移除消息
+        setTimeout(() => {
+            const alertElement = bootstrap.Alert.getOrCreateInstance(alertDiv);
+            alertElement.close();
+        }, 3000); // 3 秒后自动关闭
+    }
+
+    function two(userid) {
+        axios.put(`/api/two/${userid}`, {})
+            .then(response => {
+                showFlashMessage(response.data.message, 'success');
+            })
+            .catch(error => {
+                const errorMessage = error.response ? error.response.data.message : '出错了';
+                showFlashMessage(errorMessage, 'danger');
+            });
+
+    }
+
+    const switchElement = document.getElementById('twoFactorSwitch')
+    switchElement.addEventListener('click', (e) => {
+        userid = document.getElementById('id').dataset.id
+        two(userid)
+    })
+
+
+
+    // 打开修改密码模态框
+    document.getElementById('editPassword').addEventListener('click', function () {
+        $('#editPasswordModal').modal('show');
+    });
+
+    // 密码确认验证
+    document.getElementById('confirmNewPassword').addEventListener('input', function () {
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmNewPassword = this.value;
+
+        // 检查新密码和确认密码是否匹配
+        if (newPassword !== confirmNewPassword) {
+            document.getElementById('passwordMismatch').style.display = 'block';
+            return;
+        } else {
+            document.getElementById('passwordMismatch').style.display = 'none';
+        }
+    });
+
+    // 处理密码更新
+    document.getElementById('savePasswordBtn').addEventListener('click', function () {
+        const currentPassword = document.getElementById('currentPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+        const userid = document.getElementById('id').dataset.id
+
+        // 检查新密码和确认密码是否匹配
+        if (newPassword !== confirmNewPassword) {
+            document.getElementById('passwordMismatch').style.display = 'block';
+            return;
+        } else {
+            document.getElementById('passwordMismatch').style.display = 'none';
+        }
+
+        axios.put(`/api/user/${userid}`, {
+            current_password: currentPassword,
+            password: newPassword
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(response => {
+                alert(response.data.message);
+                $('#editPasswordModal').modal('hide');
+            })
+            .catch(error => {
+                // Axios 在 response 中包含错误信息，如果有的话，使用它，否则显示自定义信息
+                alert(error.response ? error.response.data.message : '密码更新失败');
+            });
+
+    });
+
+
+</script>
+{% endblock %}

@@ -1,0 +1,457 @@
+{% extends "base.html" %}
+
+{% block title %}ChatGPT账号管理{% endblock %}
+
+{% block content %}
+<style>
+    .token-list {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .token-list th,
+    .token-list td {
+        border: 1px solid #e2e8f0;
+        padding: 8px;
+        text-align: left;
+    }
+
+    .token-list th {
+        background-color: #f8fafc;
+    }
+
+    .token-list tr:nth-child(even) {
+        background-color: #f1f5f9;
+    }
+
+    .truncate {
+        max-width: 200px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    h2 {
+        position: relative;
+    }
+
+    #addTokenBtn {
+        position: absolute;
+        font-size: 1rem;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    button:disabled {
+        color: #ccc;
+        background-color: #eee;
+        border: none;
+        cursor: not-allowed;
+    }
+
+    button:disabled:hover {
+        color: #ccc;
+        background-color: #eee;
+        border: none;
+        cursor: not-allowed;
+    }
+
+    @media (max-width: 770px) {
+        body {
+            font-size: 2.3vw;
+        }
+
+        h2 {
+            font-size: 3.5vw !important;
+        }
+
+        #addTokenBtn {
+            font-size: 2vw;
+            line-height: 2vw;
+        }
+
+        .token-list {
+            flex: 1;
+        }
+
+        .token-list thead {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .token-list #tokenTableBody {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .token-list tr {
+            display: flex;
+        }
+
+        .token-list tr,
+        .token-list th,
+        .token-list td {
+            flex: 1;
+        }
+    }
+</style>
+<div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+    <h2 class="text-2xl font-bold text-gray-800 mb-4">账号列表
+        <button id="addTokenBtn"
+            class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-300 ease-in-out mr-2">
+            添加账号
+        </button>
+    </h2>
+    <table class="token-list">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Re Token</th>
+                <th>状态</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="tokenTableBody">
+            <!-- Token 数据将在这里动态添加 -->
+        </tbody>
+    </table>
+    <div class="flex items-center justify-between mt-4">
+        <div>
+            <button id="refreshBtn"
+                class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-300 ease-in-out mr-2">
+                立即刷新 Tokens
+            </button>
+        </div>
+        <p id="statusMessage" class="italic"></p>
+    </div>
+</div>
+
+<div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+    <h2 class="text-2xl font-bold text-gray-800 mb-4">Access Token刷新设置</h2>
+    <div class="flex items-center mb-4">
+        <input type="checkbox" id="autoRefreshToggle" class="mr-2">
+        <label for="autoRefreshToggle" class="mr-4">启用自动刷新</label>
+        <input type="number" id="refreshInterval" min="1" value="1" class="border rounded px-2 py-1 w-20 mr-2">
+        <span>天</span>
+    </div>
+    <p id="nextRefreshTime" class="text-gray-600"></p>
+</div>
+
+<div class="modal fade" id="tokenModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalLabel">账号信息</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="tokenForm">
+                    <input type="hidden" id="id">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">邮箱</label>
+                        <input type="text" class="form-control" id="email" required placeholder="仅用于标识">
+                    </div>
+                    <div class="mb-3">
+                        <label for="ReToken" class="form-label">Refresh Token</label>
+                        <input type="text" class="form-control" id="ReToken" placeholder="可为空">
+                    </div>
+                    <div class="mb-3">
+                        <label for="AcToken" class="form-label">Access Token</label>
+                        <input type="text" class="form-control" id="AcToken" placeholder="无Refresh Token时必填">
+                    </div>
+                    <div class="mb-3">
+                        <label for="PLUS" class="form-label">PLUS</label>
+                        <select class="form-select" id="PLUS" required>
+                            <option value="false">false</option>
+                            <option value="true">true</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="submit" form="tokenForm" class="btn btn-primary">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+<script>
+    function loadTokens() {
+        fetch('/get_tokens')
+            .then(response => response.json())
+            .then(data => {
+                tokens = data
+                tokenTableBody.innerHTML = '';
+                data.forEach(token => {
+                    let rt = '有'
+                    if (!token.refresh_token) {
+                        rt = '无'
+                    }
+                    let recolor = token.refresh_token ? ' style="color: rgb(6, 161, 6);"' : ' style="color: rgb(204, 28, 28);"'
+                    let color = token.status ? ' style="color: rgb(6, 161, 6);"' : ' style="color: rgb(204, 28, 28);"'
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                            <td class="truncate">${token.email}</td>
+                            <td class="truncate" ${recolor}>${rt}</td>
+                            <td class="truncate"  ${color}>${token.status ? '有效' : '失效'}</td>
+                            <td>
+                                <button onclick="editUser('${token.email}')" class="text-blue-600 hover:text-blue-900 mr-4">编辑</button>
+                                <button onclick="deleteUser('${token.email}')" class="text-red-600 hover:text-red-900">删除</button>
+                            </td>
+                        `;
+                    tokenTableBody.appendChild(row);
+                });
+            })
+            .catch(error => {
+                console.error('加载 Tokens 失败:', error);
+                showStatus('加载 Tokens 失败', 'error');
+            });
+    }
+
+    let tokens = []
+    const modal = new bootstrap.Modal(document.getElementById('tokenModal'));
+    const tokenForm = document.getElementById('tokenForm');
+    const addTokenBtn = document.getElementById('addTokenBtn');
+
+    // 打开模态框
+    function openModal(email = null) {
+        const form = document.getElementById('tokenForm');
+        if (email) {
+            document.getElementById('id').value = 'id';
+            document.getElementById('email').value = email.email;
+            document.getElementById('ReToken').value = email.refresh_token;
+            document.getElementById('AcToken').value = email.access_token;
+            document.getElementById('PLUS').value = email.PLUS;
+        } else {
+            form.reset();
+            document.getElementById('id').value = '';
+        }
+        modal.show();
+    }
+
+    // 关闭模态框
+    function closeModal() {
+        modal.hide();
+    }
+
+    // 编辑用户
+    function editUser(email) {
+        const tkemail = tokens.find(u => u.email === email);
+        if (tkemail) {
+            openModal(tkemail);
+        }
+    }
+
+    // 删除用户
+    function deleteUser(email) {
+        const token = document.querySelector('meta[name="csrf-token"]').content;
+        if (confirm('确定要删除这个账户吗？')) {
+            fetch(`/api/tokens/${email}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': token
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loadTokens();
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+    }
+
+    // 表单提交处理
+    tokenForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const Id = document.getElementById('id').value;
+        const tkemail = document.getElementById('email').value
+        const retoken = document.getElementById('ReToken').value
+        const actoken = document.getElementById('AcToken').value
+        const plus = document.getElementById('PLUS').value
+        if (!(retoken || actoken)) {
+            alert('必须有一个Refresh Token或Access Token')
+            return
+        }
+        const tkData = {
+            email: document.getElementById('email').value,
+            ReToken: retoken,
+            AcToken: actoken,
+            PLUS: plus
+        };
+
+        const url = Id ? `/api/tokens/${tkemail}` : '/api/tokens';
+        const method = Id ? 'PUT' : 'POST';
+        const token = document.querySelector('meta[name="csrf-token"]').content;
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': token
+            },
+            body: JSON.stringify(tkData)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    closeModal();
+                    loadTokens();
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    });
+
+    // 添加用户按钮点击事件
+    addTokenBtn.addEventListener('click', () => openModal());
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const tokenTableBody = document.getElementById('tokenTableBody');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        const autoRefreshToggle = document.getElementById('autoRefreshToggle');
+        const refreshInterval = document.getElementById('refreshInterval');
+        const nextRefreshTime = document.getElementById('nextRefreshTime');
+        const refreshHistory = document.getElementById('refreshHistory');
+
+        function loadTokens() {
+            fetch('/get_tokens')
+                .then(response => response.json())
+                .then(data => {
+                    tokens = data
+                    tokenTableBody.innerHTML = '';
+                    data.forEach(token => {
+                        let rt = '有'
+                        if (!token.refresh_token) {
+                            rt = '无'
+                        }
+                        let recolor = token.refresh_token ? ' style="color: rgb(6, 161, 6);"' : ' style="color: rgb(204, 28, 28);"'
+                        let color = token.status ? ' style="color: rgb(6, 161, 6);"' : ' style="color: rgb(204, 28, 28);"'
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td class="truncate">${token.email}</td>
+                            <td class="truncate" ${recolor}>${rt}</td>
+                            <td class="truncate"  ${color}>${token.status ? '有效' : '失效'}</td>
+                            <td>
+                                <button onclick="editUser('${token.email}')" class="text-blue-600 hover:text-blue-900 mr-4">编辑</button>
+                                <button onclick="deleteUser('${token.email}')" class="text-red-600 hover:text-red-900">删除</button>
+                            </td>
+                        `;
+                        tokenTableBody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('加载 Tokens 失败:', error);
+                    showStatus('加载 Tokens 失败', 'error');
+                });
+        }
+
+
+
+        function updateAutoRefreshUI(config) {
+            autoRefreshToggle.checked = config.auto_refresh_enabled;
+            refreshInterval.value = config.refresh_interval_days;
+            if (config.next_refresh_time) {
+                nextRefreshTime.textContent = `下次刷新时间: ${new Date(config.next_refresh_time).toLocaleString()}`;
+            } else {
+                nextRefreshTime.textContent = '自动刷新已关闭';
+            }
+        }
+
+        function loadAutoRefreshConfig() {
+            fetch('/get_auto_refresh_config')
+                .then(response => response.json())
+                .then(config => {
+                    updateAutoRefreshUI(config);
+                })
+                .catch(error => {
+                    console.error('加载自动刷新配置失败:', error);
+                    showStatus('加载自动刷新配置失败', 'error');
+                });
+        }
+
+        function saveAutoRefreshConfig() {
+            const token = document.querySelector('meta[name="csrf-token"]').content;
+            fetch('/set_auto_refresh', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': token
+                },
+                body: JSON.stringify({
+                    enabled: autoRefreshToggle.checked,
+                    interval: parseInt(refreshInterval.value)
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showStatus('自动刷新设置已更新', 'success');
+                        loadAutoRefreshConfig();
+                    } else {
+                        showStatus('更新自动刷新设置失败', 'error');
+                    }
+                })
+                .catch(error => {
+                    showStatus('更新自动刷新设置失败', 'error');
+                });
+        }
+
+        function refreshTokens() {
+            refreshBtn.disabled = true;
+            const token = document.querySelector('meta[name="csrf-token"]').content;
+            fetch('/refresh_tokens', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': token
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        refreshBtn.disabled = false;
+                        showStatus('Tokens 刷新成功', 'success');
+                        loadTokens();
+                        loadAutoRefreshConfig();
+
+                    } else {
+                        refreshBtn.disabled = false;
+                        showStatus('Tokens 刷新失败: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    refreshBtn.disabled = false;
+                    showStatus('Tokens 刷新失败', 'error');
+                });
+        }
+
+
+
+        function showStatus(message, status) {
+            statusMessage.textContent = message;
+            statusMessage.className = status === 'success' ? 'text-green-600' : 'text-red-600';
+            setTimeout(() => {
+                statusMessage.textContent = '';
+            }, 3000);
+        }
+
+
+        refreshBtn.addEventListener('click', refreshTokens);
+        autoRefreshToggle.addEventListener('change', saveAutoRefreshConfig);
+        refreshInterval.addEventListener('change', saveAutoRefreshConfig);
+
+
+        // 初始化
+        loadTokens();
+        loadAutoRefreshConfig();
+
+
+    });
+</script>
+{% endblock %}

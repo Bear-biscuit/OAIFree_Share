@@ -1,0 +1,70 @@
+<nav aria-label="Page navigation">
+    <ul class="pagination pagination-sm mb-0">
+        {# Previous page button #}
+        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="?page={{ pagination.prev_num }}">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+        </li>
+
+        {# First page #}
+        <li class="page-item {% if 1 == pagination.current_page %}active{% endif %}">
+            <a class="page-link" href="?page=1">1</a>
+        </li>
+
+        {% if pagination.pages > 5 %}
+            {% if pagination.current_page <= 3 %}
+                {# Show first 3 pages + ellipsis + last page #}
+                {% for page_num in range(2, 4) %}
+                    <li class="page-item {% if page_num == pagination.current_page %}active{% endif %}">
+                        <a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a>
+                    </li>
+                {% endfor %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+            {% elif pagination.current_page >= pagination.pages - 2 %}
+                {# Show first page + ellipsis + last 3 pages #}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+                {% for page_num in range(pagination.pages - 2, pagination.pages) %}
+                    <li class="page-item {% if page_num == pagination.current_page %}active{% endif %}">
+                        <a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a>
+                    </li>
+                {% endfor %}
+            {% else %}
+                {# Show first page + ellipsis + current page and neighbors + ellipsis + last page #}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+                {% for page_num in range(pagination.current_page - 1, pagination.current_page + 2) %}
+                    <li class="page-item {% if page_num == pagination.current_page %}active{% endif %}">
+                        <a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a>
+                    </li>
+                {% endfor %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+            {% endif %}
+            {# Last page #}
+            <li class="page-item {% if pagination.pages == pagination.current_page %}active{% endif %}">
+                <a class="page-link" href="?page={{ pagination.pages }}">{{ pagination.pages }}</a>
+            </li>
+        {% else %}
+            {# If total pages <= 5, show all pages #}
+            {% for page_num in range(2, pagination.pages + 1) %}
+                <li class="page-item {% if page_num == pagination.current_page %}active{% endif %}">
+                    <a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a>
+                </li>
+            {% endfor %}
+        {% endif %}
+
+        {# Next page button #}
+        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+            <a class="page-link" href="?page={{ pagination.next_num }}">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+        </li>
+    </ul>
+</nav>

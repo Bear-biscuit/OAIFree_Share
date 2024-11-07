@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+
+{% block title %}验证码验证{% endblock %}
+
+{% block content %}
+
+<style>
+    :root {
+        --primary-color: #0d6efd;
+        --border-color: #dee2e6;
+        --text-muted: #6c757d;
+        --shadow-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .otp-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f8f9fa;
+        padding: 1rem;
+    }
+
+    .card {
+        border: none;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px var(--shadow-color);
+        background: white;
+        max-width: 480px;
+        width: 100%;
+        margin: 0;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    @media (min-width: 768px) {
+        .card-body {
+            padding: 3rem;
+        }
+    }
+
+    .otp-input-group {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        margin: 1.5rem 0;
+    }
+
+    @media (min-width: 768px) {
+        .otp-input-group {
+            gap: 0.75rem;
+            margin: 2rem 0;
+        }
+    }
+
+    .otp-input {
+        width: 2.75rem;
+        height: 2.75rem;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 1.25rem;
+        font-weight: 600;
+        text-align: center;
+        color: var(--primary-color);
+        transition: all 0.2s ease;
+        background: white;
+        -moz-appearance: textfield;
+        appearance: textfield;
+        padding: 0;
+    }
+
+    @media (min-width: 768px) {
+        .otp-input {
+            width: 3.5rem;
+            height: 3.5rem;
+            font-size: 1.5rem;
+            border-radius: 12px;
+        }
+    }
+
+    .otp-input::-webkit-outer-spin-button,
+    .otp-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    .otp-input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+    }
+
+    .otp-input::placeholder {
+        color: var(--border-color);
+    }
+
+    .timer-section {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .timer {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+
+    .resend-button {
+        color: var(--primary-color);
+        border: none;
+        background: none;
+        padding: 0;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: opacity 0.2s ease;
+    }
+
+    .resend-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .submit-button {
+        width: 100%;
+        padding: 0.75rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        margin-bottom: 1rem;
+    }
+
+    @media (min-width: 768px) {
+        .submit-button {
+            padding: 0.875rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        }
+    }
+
+    .submit-button:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 0.875rem;
+        transition: color 0.2s ease;
+    }
+
+    .back-link:hover {
+        color: var(--primary-color);
+    }
+
+    .email-highlight {
+        background: #f8f9fa;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-weight: 500;
+        word-break: break-all;
+    }
+
+    .text-center h3 {
+        font-size: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    @media (min-width: 768px) {
+        .text-center h3 {
+            font-size: 1.75rem;
+            margin-bottom: 1rem;
+        }
+    }
+
+    .text-center p {
+        font-size: 0.875rem;
+        margin-bottom: 0;
+        padding: 0 1rem;
+    }
+
+    @media (min-width: 768px) {
+        .text-center p {
+            font-size: 1rem;
+            padding: 0;
+        }
+    }
+
+    .toast {
+        border-radius: 8px;
+        font-size: 0.875rem;
+    }
+
+    .alert {
+        border-radius: 8px;
+        font-size: 0.875rem;
+        margin-bottom: 1rem;
+    }
+</style>
+<div class="otp-container">
+    <div class="card">
+        <div class="card-body p-4 p-md-5">
+
+            <div class="text-center mb-4">
+                <h3 class="fw-bold mb-3">验证你的邮箱</h3>
+                <p class="text-muted">
+                    我们已向 <span class="email-highlight">{{ session.get('temp_email', '***@***.com') }}</span> 发送验证码
+                </p>
+            </div>
+
+            <form method="POST" action="{{ url_for('auth.verify_otp') }}" id="otpForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="otp-input-group">
+                    {% for i in range(6) %}
+                    <input type="number" 
+                           class="otp-input" 
+                           maxlength="1" 
+                           inputmode="numeric"
+                           autocomplete="one-time-code"
+                           pattern="[0-9]"
+                           required>
+                    {% endfor %}
+                </div>
+                <input type="hidden" name="otp_code" id="otpValue">
+
+                <div class="timer-section">
+                    <span class="timer" id="timer">05:00</span>
+                    <button type="button" 
+                            class="resend-button" 
+                            id="resendButton" 
+                            disabled>
+                        重新发送验证码
+                    </button>
+                </div>
+
+                <button type="submit" 
+                        class="btn btn-primary submit-button mb-4" 
+                        id="submitButton" 
+                        disabled>
+                    验证
+                </button>
+
+                <div class="text-center">
+                    <a href="{{ url_for('auth.login') }}" class="back-link">
+                        <i class="bi bi-arrow-left me-2"></i>
+                        返回登录
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = document.querySelectorAll('.otp-input');
+    const form = document.getElementById('otpForm');
+    const submitButton = document.getElementById('submitButton');
+    const resendButton = document.getElementById('resendButton');
+    const otpValue = document.getElementById('otpValue');
+    const timerDisplay = document.getElementById('timer');
+
+    let timeLeft = 300;
+    let timerId = startTimer();
+
+    // 自动聚焦第一个输入框
+    inputs[0].focus();
+
+    function startTimer() {
+        updateTimerDisplay();
+        return setInterval(() => {
+            timeLeft--;
+            updateTimerDisplay();
+            
+            if (timeLeft <= 0) {
+                clearInterval(timerId);
+                resendButton.disabled = false;
+            }
+        }, 1000);
+    }
+
+    function updateTimerDisplay() {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    inputs.forEach((input, index) => {
+        input.addEventListener('input', function(e) {
+            // 清除非数字字符
+            this.value = this.value.replace(/[^\d]/g, '');
+
+            if (this.value.length >= 1) {
+                this.value = this.value[0];
+                if (index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                }
+            }
+            
+            checkComplete();
+        });
+
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Backspace' && !this.value && index > 0) {
+                inputs[index - 1].focus();
+                inputs[index - 1].value = '';
+                checkComplete();
+            }
+        });
+
+        input.addEventListener('focus', function() {
+            this.select();
+        });
+
+        input.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const pastedData = e.clipboardData.getData('text').replace(/[^\d]/g, '');
+            
+            if (pastedData.length >= 6) {
+                inputs.forEach((input, i) => {
+                    input.value = pastedData[i] || '';
+                });
+                inputs[5].focus();
+                checkComplete();
+            }
+        });
+    });
+
+    function checkComplete() {
+        const values = Array.from(inputs).map(input => input.value);
+        const isComplete = values.every(value => value.length === 1);
+        submitButton.disabled = !isComplete;
+        
+        if (isComplete) {
+            otpValue.value = values.join('');
+        }
+    }
+
+    resendButton.addEventListener('click', async () => {
+        try {
+            const response = await fetch('{{ url_for("auth.resend_otp") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            });
+            
+            if (response.ok) {
+                clearInterval(timerId);
+                timeLeft = 300;
+                timerId = startTimer();
+                resendButton.disabled = true;
+                
+                const toastHTML = `
+                    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+                        <div class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                            <div class="d-flex">
+                                <div class="toast-body">
+                                    验证码已重新发送至您的邮箱
+                                </div>
+                                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', toastHTML);
+                const toastEl = document.querySelector('.toast');
+                const toast = new bootstrap.Toast(toastEl);
+                toast.show();
+
+                // 清空输入框
+                inputs.forEach(input => input.value = '');
+                inputs[0].focus();
+                checkComplete();
+            } else {
+                throw new Error('发送失败');
+            }
+        } catch (error) {
+            const alertHTML = `
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    发送验证码失败，请稍后重试
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            form.insertAdjacentHTML('beforebegin', alertHTML);
+        }
+    });
+
+    form.addEventListener('submit', (e) => {
+        if (!otpValue.value || otpValue.value.length !== 6) {
+            e.preventDefault();
+            const alertHTML = `
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    请输入完整的验证码
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            form.insertAdjacentHTML('beforebegin', alertHTML);
+        }
+    });
+});
+</script>
+{% endblock %}

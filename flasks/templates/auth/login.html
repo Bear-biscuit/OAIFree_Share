@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}登录{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card">
+            <div class="card-body p-4 p-lg-5">
+                <h2 class="text-center mb-4" style="color: var(--primary-color);">
+                    <i class="fas fa-sign-in-alt me-2"></i>用户登录
+                </h2>
+                
+                <form method="POST" class="needs-validation" novalidate>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-4">
+                        <label for="username" class="form-label">用户名</label>
+                        <div class="input-group">
+                            <span class="input-group-text border-0 bg-light">
+                                <i class="fas fa-user text-secondary"></i>
+                            </span>
+                            <input type="text" class="form-control" id="username" name="username" 
+                                   required autocomplete="username">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="password" class="form-label">密码</label>
+                        <div class="input-group">
+                            <span class="input-group-text border-0 bg-light">
+                                <i class="fas fa-lock text-secondary"></i>
+                            </span>
+                            <input type="password" class="form-control" id="password" name="password" 
+                                   required autocomplete="current-password">
+                        </div>
+                        <div class="mt-1 text-end">
+                            <a href="{{ url_for('auth.forgot_password') }}" class="text-decoration-none small">
+                                忘记密码？
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="mb-4 form-check">
+                        <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                        <label class="form-check-label" for="remember">记住我</label>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i>登录
+                        </button>
+                    </div>
+                </form>
+
+                <div class="mt-4 text-center">
+                    <p class="mb-0 text-secondary">还没有账号？ 
+                        <a href="{{ url_for('auth.register') }}" class="text-decoration-none">立即注册</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 表单验证
+(function () {
+    'use strict'
+    const forms = document.querySelectorAll('.needs-validation')
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault()
+                event.stopPropagation()
+            }
+            form.classList.add('was-validated')
+        }, false)
+    })
+})()
+</script>
+{% endblock %}
