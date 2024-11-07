@@ -26,7 +26,7 @@ CREATE TABLE `user`  (
   UNIQUE INDEX `email`(`email` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
-INSERT INTO `user` VALUES (1, 'bocchi', 'scrypt:32768:8:1$DK8XDdwapTIPJn0b$27eb523d1b6277781caf005d2c2bdd5a213dcae8d400bb44cb8896cad129a669ea3fa9188ffa51c021210ca215b5e1d0c0a45072d03bec5ac82bfa64cde09e6b', 'bocchi2b@outlook.com', 'admin', '2024-11-01 12:53:03', '192.168.3.130', '2024-10-20 14:18:50', NULL, NULL, 0);
+INSERT INTO `user` VALUES (1, 'admin', 'scrypt:32768:8:1$DK8XDdwapTIPJn0b$27eb523d1b6277781caf005d2c2bdd5a213dcae8d400bb44cb8896cad129a669ea3fa9188ffa51c021210ca215b5e1d0c0a45072d03bec5ac82bfa64cde09e6b', 'bocchi2b@outlook.com', 'admin', '2024-11-01 12:53:03', '192.168.3.130', '2024-10-20 14:18:50', NULL, NULL, 0);
 
 
 -- 创建chat自动任务配置表
