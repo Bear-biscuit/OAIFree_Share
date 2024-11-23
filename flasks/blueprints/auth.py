@@ -145,7 +145,10 @@ def login():
         remember = request.form.get('remember') == 'on'
         user_ip = get_user_ip()
         user = User.query.filter_by(username=username).first()
-        
+        if user is None:
+          # 处理用户未找到的情况 
+          flash(‘用户名或密码错误！’， danger')
+          return redirect(url_for('auth.login'))
         if not user.two_fa or user_ip == user.last_login_ip:
             
             if user and check_password_hash(user.password, password):
